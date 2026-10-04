@@ -1,0 +1,183 @@
+LLM Security Gateway : structure du depot
+=========================================
+
+Seuls les fichiers versionnes sont listes. Les dossiers generes (.venv,
+node_modules, .next, __pycache__) et le fichier .env ne sont pas dans le depot.
+
+llm-security-gateway/
+├── .env.example               Modele de configuration (copier en .env ; ne jamais versionner .env)
+├── .gitignore
+├── README.md                  Presentation, installation, utilisation, limites
+├── structure.txt              Ce fichier
+├── Architecture.png           Schema d'architecture
+├── docker-compose.yml         Base PostgreSQL (conteneur llm-security-postgres, port 15432)
+├── requirements.txt           Dependances Python
+│
+├── backend/                   API du Gateway (FastAPI)
+│   ├── requirements.txt
+│   ├── alembic.ini
+│   ├── alembic/               Migrations de la base
+│   │   ├── README
+│   │   ├── env.py
+│   │   ├── script.py.mako
+│   │   └── versions/
+│   │       ├── 5fcf4c0abc81_create_users_table.py
+│   │       ├── a586d333d0c6_create_applications_table.py
+│   │       ├── 51c1ed7d9d97_create_campaigns_table.py
+│   │       ├── 56cda9544611_create_attack_execution_gateway_and_.py
+│   │       ├── e43895952bef_add_created_by_to_applications.py
+│   │       ├── 07029555e6ef_add_cascade_deletes_to_foreign_keys.py
+│   │       └── 95592ffb564b_unique_evaluation_per_campaign_and_.py
+│   │
+│   ├── benchmark/             Mesure du detecteur sur des jeux d'attaques et de messages legitimes
+│   │   ├── __init__.py
+│   │   ├── dataset.py         Jeux de test (graine fixe)
+│   │   └── run.py             python -m benchmark.run
+│   │
+│   ├── test_phase12_integration.py     Test d'integration (services lances)
+│   ├── test_real_integration.py
+│   ├── test_real_integration_final.py
+│   │
+│   └── app/
+│       ├── main.py            Application FastAPI, CORS, routeurs, /health
+│       ├── cli.py
+│       │
+│       ├── adapters/          Adaptateurs vers les applications cibles
+│       │   ├── __init__.py
+│       │   └── ai_goat.py     Client HTTP d'AIGoat (POST /api/chat/)
+│       │
+│       ├── api/               Routes
+│       │   ├── auth_routes.py
+│       │   ├── user_routes.py
+│       │   ├── application_routes.py
+│       │   ├── campaign_routes.py          dont clonage et re-test
+│       │   ├── attack_routes.py
+│       │   ├── attack_execution_routes.py
+│       │   ├── gateway_decision_routes.py
+│       │   ├── evaluation_routes.py        dont comparaison de deux evaluations
+│       │   └── ai_goat_routes.py           POST /api/ai-goat/execute
+│       │
+│       ├── core/              Configuration et securite
+│       │   ├── config.py      Parametres lus dans .env
+│       │   ├── database.py    Moteur SQLAlchemy et sessions
+│       │   ├── security.py    Hachage des mots de passe (Argon2) et jetons JWT
+│       │   ├── auth.py        Utilisateur courant, controle d'acces
+│       │   └── rate_limit.py  Limitation de debit (tentatives de connexion)
+│       │
+│       ├── models/            Modeles SQLAlchemy
+│       │   ├── __init__.py
+│       │   ├── user.py
+│       │   ├── application.py
+│       │   ├── campaign.py
+│       │   ├── attack.py
+│       │   ├── attack_execution.py
+│       │   ├── gateway_decision.py
+│       │   └── evaluation.py
+│       │
+│       ├── schemas/           Schemas Pydantic
+│       │   ├── __init__.py
+│       │   ├── types.py       Valeurs autorisees (roles, statuts, actions du Gateway...)
+│       │   ├── ai_goat.py
+│       │   ├── auth.py
+│       │   ├── user.py
+│       │   ├── application.py
+│       │   ├── campaign.py
+│       │   ├── attack.py
+│       │   ├── attack_execution.py
+│       │   ├── gateway_decision.py
+│       │   └── evaluation.py
+│       │
+│       └── services/          Logique metier
+│           ├── __init__.py
+│           ├── user_service.py
+│           ├── application_service.py
+│           ├── campaign_service.py
+│           ├── attack_service.py
+│           ├── attack_execution_service.py
+│           ├── gateway_service.py              Enregistrement des decisions
+│           ├── gateway_execution_service.py    Orchestration : analyse, decision, appel de la cible
+│           ├── evaluation_service.py           Calcul automatique des mesures d'une campagne
+│           ├── retest_service.py               Copie et rejeu d'une campagne
+│           ├── attack_engine.py                Generateur d'attaques (EN, FR)
+│           ├── normalizer.py                   Decodage des messages deguises
+│           ├── detection_engine.py             Regles de detection par categorie
+│           ├── detection_pipeline.py           Detection sur le message et ses variantes decodees
+│           ├── risk_scoring_engine.py          Score de risque
+│           ├── policy_engine.py                Decision ALLOW / FLAG / BLOCK et escalade de session
+│           ├── test_detection_engine.py
+│           ├── test_policy_engine.py
+│           ├── test_evaluation_service.py
+│           ├── test_attack_engine.py
+│           ├── test_attack_engine_clean.py
+│           ├── test_e2e.py
+│           └── test_e2e_clean.py
+│
+└── frontend/                  Tableau de bord (Next.js, React, Tailwind, TypeScript)
+    ├── package.json
+    ├── package-lock.json
+    ├── tsconfig.json
+    ├── next.config.ts
+    ├── postcss.config.mjs
+    ├── eslint.config.mjs
+    ├── public/
+    │
+    ├── app/
+    │   ├── layout.tsx                  Layout racine
+    │   ├── globals.css
+    │   ├── favicon.ico
+    │   ├── login/page.tsx              Connexion
+    │   ├── register/page.tsx           Inscription
+    │   └── (app)/                      Pages protegees (groupe de routes)
+    │       ├── layout.tsx              Garde d'acces et en-tete (AppShell)
+    │       ├── page.tsx                Accueil : indicateurs et resultats par campagne
+    │       ├── applications/page.tsx
+    │       ├── campaigns/
+    │       │   ├── page.tsx            Liste des campagnes
+    │       │   └── [id]/
+    │       │       ├── page.tsx        Detail : resultats avec / sans defense, attaques
+    │       │       └── report/page.tsx Rapport imprimable et export JSON
+    │       ├── tester/page.tsx         Testeur interactif
+    │       └── decisions/page.tsx      Historique des decisions
+    │
+    ├── components/
+    │   ├── ui.tsx                      Composants de base
+    │   ├── AppShell.tsx                En-tete et controle de session
+    │   ├── AuthCard.tsx                Carte de connexion / inscription
+    │   ├── ActionBadge.tsx             Badge ALLOW / FLAG / BLOCK
+    │   └── MetricBar.tsx               Barre de mesure
+    │
+    └── lib/
+        ├── api.ts                      Client HTTP du Gateway
+        ├── auth.ts                     Session (jeton dans l'onglet)
+        ├── campaignData.ts             Chargement d'une campagne et de son historique
+        ├── metrics.ts                  Mesures avec / sans defense
+        ├── format.ts                   Formatage
+        ├── labels.ts                   Categories et exemples du testeur
+        └── useLoad.ts                  Chargement de donnees
+
+
+Ports
+=====
+
+    PostgreSQL ..... 15432
+    Ollama ......... 11434
+    AIGoat ......... 8001
+    Gateway ........ 8000
+    Dashboard ...... 3000
+
+
+Traitement d'un message
+=======================
+
+    POST /api/ai-goat/execute
+        │
+        ├─ verification du jeton et du proprietaire de la campagne
+        ├─ normalisation et detection        (normalizer, detection_pipeline)
+        ├─ score de risque                   (risk_scoring_engine)
+        ├─ decision                          (policy_engine)
+        │     ├─ BLOCK : le message n'est pas transmis
+        │     └─ ALLOW / FLAG : transmis a la cible (adapters/ai_goat.py)
+        └─ enregistrement de l'execution et de la decision
+
+    L'evaluation de la campagne est ensuite calculee a partir des executions
+    (evaluation_service) : detection, attaques reussies, faux positifs, latence.

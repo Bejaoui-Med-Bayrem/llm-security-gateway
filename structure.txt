@@ -9,7 +9,6 @@ llm-security-gateway/
 ├── .gitignore
 ├── README.md                  Presentation, installation, utilisation, limites
 ├── structure.txt              Ce fichier
-├── Architecture.png           Schema d'architecture
 ├── docker-compose.yml         Base PostgreSQL (conteneur llm-security-postgres, port 15432)
 ├── requirements.txt           Dependances Python
 │
